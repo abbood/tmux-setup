@@ -1,4 +1,5 @@
 #!/bin/bash
+
 # Function to create a new session with windows if it doesn't exist
 create_session() {
     local session_name=$1
@@ -30,16 +31,49 @@ create_session() {
         fi
     fi
 }
-# Kill existing sessions if they exist
-tmux kill-session -t web 2>/dev/null
-tmux kill-session -t bac 2>/dev/null
-tmux kill-session -t db 2>/dev/null
-# Create web session
-create_session "web" "web-siira" "web"
-# Create bac session
-create_session "bac" "bac-siira" "bac"
-# Create db session and setup SSH tunnel
-tmux new-session -d -s db -n "db"
-tmux send-keys -t db "gcloud compute ssh --zone=us-central1-a staging-main-backend-node -- -NL 7777:10.226.0.3:5432" C-m
-# Attach to the web session (you can change this to whichever session you prefer)
-tmux attach-session -t web
+
+# Function to kill all tmux sessions
+kill_all_sessions() {
+    tmux kill-server 2>/dev/null
+    echo "All tmux sessions cleared"
+}
+
+# Function to list all tmux sessions
+list_sessions() {
+    if ! tmux list-sessions 2>/dev/null; then
+        echo "No active tmux sessions"
+    fi
+}
+
+# Function to setup Siira project
+setup_siira() {
+    # Create web session
+    create_session "web" "web-siira" "web"
+    # Create bac session
+    create_session "bac" "bac-siira" "bac"
+    # Create db session and setup SSH tunnel
+    tmux new-session -d -s db -n "db"
+    tmux send-keys -t db "gcloud compute ssh --zone=us-central1-a staging-main-backend-node -- -NL 7777:10.226.0.3:5432" C-m
+    # Attach to the web session
+    tmux attach-session -t web
+}
+
+# Main command handling
+case "$1" in
+    "clear")
+        kill_all_sessions
+        ;;
+    "siira")
+        setup_siira
+        ;;
+    "ls")
+        list_sessions
+        ;;
+    *)
+        echo "Usage: $0 {clear|siira|ls}"
+        echo "  clear - Kill all existing tmux sessions"
+        echo "  siira - Setup tmux sessions for Siira project"
+        echo "  ls    - List all active tmux sessions"
+        exit 1
+        ;;
+esac
